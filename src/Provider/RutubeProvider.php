@@ -2,6 +2,7 @@
 
 namespace HarryButtowski\VideoService\Provider;
 
+use DOMDocument;
 use Exception;
 
 /**
@@ -44,9 +45,23 @@ class RutubeProvider extends Provider
      * @param string $url
      *
      * @return string
+     * @throws Exception
      */
     private function prepareUrl(string $url): string
     {
+        if (strpos($url, 'embed')) {
+            $doc = new DOMDocument();
+            if (@$doc->loadHTMLFile('http:' . $url)) {
+                foreach ($doc->getElementsByTagName('link') as $node) {
+                    if ($node->getAttribute('rel') == 'canonical') {
+                        $url = $node->getAttribute('href');
+                    }
+                }
+            } else {
+                throw new Exception('Not found', 404);
+            }
+        }
+
         $idVideo = $this->getIdVideoFromUrl($url);
 
         return sprintf('http://rutube.ru/api/video/%s', $idVideo);
@@ -61,6 +76,6 @@ class RutubeProvider extends Provider
     {
         preg_match('/video\/(.*)?\//', $url, $matches);
 
-        return $matches[1] ?? null;
+        return $matches[1] ?? '';
     }
 }
